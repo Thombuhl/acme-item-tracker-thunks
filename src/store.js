@@ -2,14 +2,10 @@ import { createStore, combineReducers, applyMiddleware } from 'redux';
 import logger from 'redux-logger';
 import thunk from 'redux-thunk';
 import axios from 'axios';
+import { DELETE_THING, UPDATE_THING, SET_THINGS, CREATE_THING} from './Types/ThingType';
+import { DELETE_USER, SET_USERS, CREATE_USER, UPDATE_USER } from './Types/UserType';
 
-const initialState = {
-  view: window.location.hash.slice(1),
-  users: [],
-  things: []
-};
-
-const viewReducer = (state =window.location.hash.slice(1), action)=> { 
+const viewReducer = (state = window.location.hash.slice(1), action)=> { 
   if(action.type === 'SET_VIEW'){
     return action.view;
   }
@@ -17,35 +13,36 @@ const viewReducer = (state =window.location.hash.slice(1), action)=> {
 };
 
 const usersReducer = (state = [], action)=> { 
-  if(action.type === 'DELETE_USER'){
-    return state.filter(user => user.id !== action.user.id )
-  }
-  if(action.type === 'SET_USERS'){
-    return action.users;
-  }
-  if(action.type === 'CREATE_USER'){
-    return [...state, action.user ]; 
-  }
-  return state;
+  switch (action.type) {
+    case DELETE_USER:
+      return  state.filter(user => user.id !== action.user.id )
+    case SET_USERS:
+      return action.users;
+    case CREATE_USER:
+      return [...state, action.user ]; 
+    case UPDATE_USER:
+      return state.map(user => user.id !== action.user.id ? user : action.user);
+    default: 
+      return state;
+  };
 };
 
 const thingsReducer = (state = [], action)=> { 
-  if(action.type === 'DELETE_THING'){
-    return state.filter(thing => thing.id !== action.thing.id);
-  }
-  if(action.type === 'UPDATE_THING'){
-    return state.map(thing => thing.id !== action.thing.id ? thing : action.thing);
-  }
-  if(action.type === 'SET_THINGS'){
-    return action.things;
-  }
-  if(action.type === 'CREATE_THING'){
-    return [...state, action.thing ]; 
-  }
-  return state;
+  switch (action.type) {
+    case DELETE_THING:
+      return state.filter(thing => thing.id !== action.thing.id);
+    case UPDATE_THING:
+      return state.map(thing => thing.id !== action.thing.id ? thing : action.thing);
+    case SET_THINGS:
+      return action.things;
+    case CREATE_THING: 
+      return [...state, action.thing ]; 
+    default: 
+      return state
+  };
 };
 
-const reducer = combineReducers({
+const rootReducer = combineReducers({
   users: usersReducer,
   things: thingsReducer,
   view: viewReducer
@@ -64,9 +61,54 @@ const deleteThing = (thing)=> {
   };
 };
 
-const store = createStore(reducer, applyMiddleware(logger, thunk));
+const createUser = () => {
+  return async(dispatch) => {
+    const user = (await axios.post('/api/users', {name: Math.random()})).data;
+    dispatch({ type: 'CREATE_USER', user});
+  };
+};
 
-export { deleteThing, updateThing };
+const removeThingFromUser = (thing) => {
+  return async(dispatch) => {
+    thing = {...thing, userId: null}
+    const updatedThing = (await axios.put(`/api/things/${thing.id}`, thing)).data
+    dispatch({ type: 'UPDATE_THING', thing: updatedThing});
+  };
+};
+
+const deleteUser = (user) => {
+  return async(dispatch) => {
+    await axios.delete(`/api/users/${user.id}`);
+    dispatch({ type: 'DELETE_USER', user});
+  };
+};
+
+const createThing = () => {
+  return async(dispatch) => {
+    const response = await axios.post('/api/things', { name: Math.random()});
+    const thing = response.data;
+    dispatch({ type: 'CREATE_THING', thing });
+  };
+};
+
+const updateUser = (user) => {
+  return async(dispatch) => {
+    user = (await axios.put(`/api/user/${user.id}`, user)).data;
+    dispatch({ type: 'UPDATE_USER', user });
+  }
+}
+
+
+const store = createStore(rootReducer, applyMiddleware(logger, thunk));
+
+export { 
+  deleteThing,
+   updateThing,
+    createUser, 
+     removeThingFromUser,
+      deleteUser,
+       createThing, 
+        updateUser, };
 
 export default store;
 

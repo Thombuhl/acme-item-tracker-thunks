@@ -6,6 +6,11 @@ const { STRING, INTEGER } = Sequelize;
 const User = conn.define('user', {
   name: {
     type: STRING 
+  },
+  ranking: {
+    type: INTEGER,
+    allowNull: true,
+    defaultValue: 5,
   }
 });
 
@@ -25,6 +30,7 @@ Thing.addHook('beforeValidate', (thing) => {
     thing.userId = null;
   }
 });
+
 
 module.exports = {
   conn,
